@@ -12,7 +12,7 @@
 | 6 | Partition Keys (PKey) - InfiniBand Mapping | [ ] |
 | 7 | MC-LAG (Multi-Chassis Link Aggregation) | [ ] |
 | 8 | EVPN-MH (Ethernet VPN Multihoming) | [x] |
-| 9 | Hardware-Accelerated ECMP | [ ] |
+| 9 | Hardware-Accelerated ECMP | [x] |
 | 10 | VF-LAG (Virtual Function Link Aggregation) | [ ] |
 | 11 | RoCEv2 (RDMA over Converged Ethernet) | [ ] |
 | 12 | DCB (Data Center Bridging) Overview | [ ] |
