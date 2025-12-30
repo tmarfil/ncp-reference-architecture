@@ -11,7 +11,7 @@
 | 5 | VRF (Virtual Routing and Forwarding) | [ ] |
 | 6 | Partition Keys (PKey) - InfiniBand Mapping | [ ] |
 | 7 | MC-LAG (Multi-Chassis Link Aggregation) | [ ] |
-| 8 | EVPN-MH (Ethernet VPN Multihoming) | [ ] |
+| 8 | EVPN-MH (Ethernet VPN Multihoming) | [x] |
 | 9 | Hardware-Accelerated ECMP | [ ] |
 | 10 | VF-LAG (Virtual Function Link Aggregation) | [ ] |
 | 11 | RoCEv2 (RDMA over Converged Ethernet) | [ ] |
