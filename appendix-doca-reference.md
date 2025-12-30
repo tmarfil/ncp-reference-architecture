@@ -6,6 +6,73 @@ NVIDIA DOCA (Data Center Infrastructure On a Chip Architecture) unlocks hardware
 
 **Key Insight**: Control plane components (BGP, EVPN, routing daemons) are standard Linux software. Data plane components (packet forwarding, encapsulation, firewalling) benefit from DOCA hardware acceleration.
 
+## FRRouting and DOCA: Separate Layers
+
+**FRRouting is the same package everywhere.** It doesn't have DOCA awareness—they operate at different layers:
+
+```
+┌─────────────────────────────────────────┐
+│ FRRouting (Control Plane)               │  ← Standard package (apt install frr)
+│ • BGP, OSPF, EVPN                       │
+│ • Writes routes to kernel FIB           │
+├─────────────────────────────────────────┤
+│ Linux Kernel Routing Stack              │
+├─────────────────────────────────────────┤
+│ DOCA / ASAP² Driver (Data Plane)        │  ← Hardware offload layer
+│ • Offloads FIB to ConnectX silicon      │
+│ • FRR doesn't know or care              │
+└─────────────────────────────────────────┘
+```
+
+FRR programs routes → kernel FIB → DOCA driver offloads to hardware automatically. No special FRR package needed.
+
+## DPU Operating Systems
+
+| OS | Support | Notes |
+|----|---------|-------|
+| **Ubuntu** | 20.04, 22.04 | Most common for DPU development |
+| **RHEL / Rocky** | 8.x, 9.x | Enterprise deployments |
+| **BlueField OS (BFOS)** | Yes | NVIDIA's Yocto-based minimal OS |
+| **Debian** | Limited | Community support |
+
+The DPU runs its own ARM-based Linux OS, separate from the host x86 OS.
+
+## DOCA Installation and Repositories
+
+NVIDIA provides dedicated repositories for DOCA packages:
+
+```bash
+# Add NVIDIA DOCA repo (Ubuntu 22.04 ARM64 example)
+wget https://linux.mellanox.com/public/keys/GPG-KEY-Mellanox.pub
+apt-key add GPG-KEY-Mellanox.pub
+
+# Add repo for DPU (aarch64)
+echo "deb https://linux.mellanox.com/public/repo/doca/2.x/ubuntu22.04/aarch64/ ./" \
+  > /etc/apt/sources.list.d/doca.list
+
+apt update
+apt install doca-runtime doca-sdk
+```
+
+Or via **BlueField Software Bundle (BFB)**—a complete image flashed to DPU:
+
+```bash
+# Flash BFB image to DPU from host
+bfb-install --bfb DOCA_2.9.1_BSP_4.9.0_Ubuntu_22.04-1.bfb --rshim rshim0
+```
+
+## What's DOCA-Specific vs Standard Linux?
+
+| Component | Standard Linux | DOCA-Specific |
+|-----------|----------------|---------------|
+| **FRRouting (BGP/EVPN)** | `apt install frr` | Same package |
+| **Open vSwitch** | `apt install openvswitch-switch` | **OVS-DOCA** (different) |
+| **Firewall** | iptables / nftables | **DOCA Firewall** |
+| **Drivers** | mlx5_core (inbox) | mlx5_core + **DOCA libs** |
+| **NVMe** | kernel nvme driver | **DOCA SNAP** |
+
+**Rule of thumb**: Control plane = standard Linux. Data plane = DOCA-accelerated.
+
 ## Standard Linux vs. DOCA-Accelerated Components
 
 | Category | Component | Standard Linux | DOCA-Accelerated | Notes | Documentation |
