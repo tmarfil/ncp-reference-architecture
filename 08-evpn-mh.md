@@ -2,9 +2,81 @@
 
 ## Core Concept
 
-EVPN-MH provides **switch-side coordination** for hosts connected to multiple leaf switches, enabling redundancy and load balancing **without requiring host-side bonding configuration**.
+EVPN-MH provides **switch-side coordination** for hosts connected to multiple leaf switches, enabling redundancy and load balancing with minimal host configuration (bridge, no LACP/bonding driver).
 
 The key insight: the intelligence lives in the switches, not the host.
+
+## When to Use EVPN-MH vs L3 ECMP
+
+The NCP Reference Architecture recommends different techniques based on VTEP location:
+
+| Deployment Model | VTEP Location | Recommended Technique |
+|------------------|---------------|----------------------|
+| **Switch-centric** | Leaf switches | EVPN-MH |
+| **DPU-centric (DPU Mode)** | BlueField DPU | L3 ECMP |
+
+```
+Switch-Centric (EVPN-MH)              DPU-Centric (L3 ECMP)
+────────────────────────              ────────────────────
+     Host                                  Host OS
+   (bridge)                              (single NIC view)
+   ┌──┴──┐                                    │
+   │     │                              ┌─────┴─────┐
+   │     │                              │    DPU    │ ← VTEP here
+┌──┴──┐ ┌┴────┐                         │ (L3 ECMP) │
+│Leaf1│ │Leaf2│ ← VTEPs here            └─────┬─────┘
+│EVPN-│ │EVPN-│                          ┌────┴────┐
+│ MH  │ │ MH  │                          │         │
+└─────┘ └─────┘                      ┌───┴──┐  ┌───┴──┐
+                                     │Leaf1 │  │Leaf2 │ ← Just route
+                                     └──────┘  └──────┘   underlay
+```
+
+**EVPN-MH** = "Gold standard" baseline for switch-centric deployments.
+**L3 ECMP** = "Advanced evolution" for DPU-centric AI factories—moves intelligence into DPU, simplifies switch config.
+
+## Two Options for Dual-Homed DPU Connectivity
+
+### Option 1: EVPN-MH
+
+```
+DPU
+├─ br0: 10.0.0.5              ← Single IP on bridge
+│  ├─ eth0 ──► Leaf1 (EVPN-MH)
+│  └─ eth1 ──► Leaf2 (EVPN-MH)
+│
+└─ default via 10.0.0.1       ← Anycast gateway (exists on both leaves)
+```
+
+- **DPU config**: Bridge interface across two links, single IP, forwards to anycast gateway
+- **Switch config**: EVPN-MH, switches are VTEPs
+- **Uplinks**: L2
+
+### Option 2: L3 ECMP
+
+```
+DPU
+├─ eth0: 169.254.0.1/31 ──► Leaf1    ← Separate L3 link
+└─ eth1: 169.254.0.3/31 ──► Leaf2    ← Separate L3 link
+
+BGP: ECMP routes to remote VTEPs via either leaf
+```
+
+- **DPU config**: Two separate interfaces, two IPs, runs BGP, ECMP routes
+- **Switch config**: Basic BGP peering, just route underlay
+- **Uplinks**: L3
+
+### Comparison
+
+| Aspect | Option 1: EVPN-MH | Option 2: L3 ECMP |
+|--------|-------------------|-------------------|
+| **DPU interface** | Bridge (L2) | Separate L3 links |
+| **DPU IP addresses** | 1 (on bridge) | 2 (one per link) |
+| **DPU runs BGP?** | No (uses gateway) | Yes |
+| **Switch config** | EVPN-MH required | Basic BGP only |
+| **VTEP location** | Leaf switches | DPU |
+
+Both are valid. NCP recommends **Option 2** for DPU Mode deployments.
 
 ## Why EVPN-MH Exists
 
@@ -234,28 +306,33 @@ Two leaves per ES is the common deployment model—matches physical topology and
 
 ## When EVPN-MH Applies
 
-EVPN-MH is for **host-to-leaf** multihoming:
+EVPN-MH applies to **switch-centric deployments** where leaves are VTEPs:
 
 ```
-✓ EVPN-MH applies here:
+✓ EVPN-MH: Switch-centric (leaves are VTEPs)
 
-    Host ──┬── Leaf 1
-           └── Leaf 2
+    Host (bridge) ──┬── Leaf 1 (VTEP, EVPN-MH)
+                    └── Leaf 2 (VTEP, EVPN-MH)
 
-✗ EVPN-MH does NOT apply here (this is underlay ECMP):
+✗ NOT EVPN-MH: DPU-centric (DPU is VTEP)
 
-    DPU (as router) ──┬── Spine 1
-                      └── Spine 2
+    DPU (VTEP, L3) ──┬── Leaf 1 (routes underlay)
+                     └── Leaf 2 (routes underlay)
 ```
 
-For DPU-to-spine connectivity where the DPU operates as an L3 router, use hardware-accelerated ECMP instead (covered in a separate topic).
+For **DPU Mode** deployments where the BlueField DPU is the VTEP:
+- DPU has L3 uplinks to leaves
+- DPU uses hardware-accelerated ECMP for redundancy
+- Leaves just route underlay—no EVPN-MH config needed
+- See [Hardware-Accelerated ECMP](09-ecmp.md) for details
 
 ## Key Takeaways
 
-1. **EVPN-MH** enables host multihoming across different switches without host-side bonding
-2. **ES-ID + ES-sys-mac** must match on participating switches to form an Ethernet Segment
-3. **Unicast = active-active** (flow-hashed); **BUM = active-standby** (DF election)
-4. **Host configuration** is minimal—standard Linux bridge, IP on bridge interface
-5. **Load balancing** is per-flow hash at the remote VTEP, not congestion-aware
-6. **Preferred over MC-LAG**—standards-based, no wasted inter-switch ports
-7. **Typical deployment** uses 2 leaves per ES, matching dual-NIC/DPU host topology
+1. **EVPN-MH** enables host multihoming across different switches with minimal host config (bridge)
+2. **Switch-centric only**—applies when leaves are VTEPs; for DPU Mode, use L3 ECMP instead
+3. **ES-ID + ES-sys-mac** must match on participating switches to form an Ethernet Segment
+4. **Unicast = active-active** (flow-hashed); **BUM = active-standby** (DF election)
+5. **Host configuration** is minimal—standard Linux bridge, IP on bridge interface
+6. **Load balancing** is per-flow hash at the remote VTEP, not congestion-aware
+7. **Preferred over MC-LAG**—standards-based, no wasted inter-switch ports
+8. **Typical deployment** uses 2 leaves per ES, matching dual-NIC/DPU host topology

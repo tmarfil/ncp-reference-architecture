@@ -28,8 +28,15 @@ Each compute node has 2 x Bluefield-4 DPUs with 4 x 400G ports. Each compute nod
 *   **Hardware-Based Congestion Control**: Native support within the switching fabric ensures that high-bandwidth storage or management traffic does not interfere with other tenants in a shared environment.
 
 ### Network Resiliency and Host Connectivity
-*   **EVPN-MH (Ethernet VPN Multihoming)**: This is the recommended standards-based solution to eliminate single points of failure by connecting a host to two separate leaf switches for active-active forwarding and seamless failover.
-*   **Hardware-Accelerated ECMP (Equal-Cost Multi-Path)**: When using **BlueField DPUs (Data Processing Units)** in DPU Mode, the DPU acts as a Layer-3 router, performing per-flow load balancing and failover entirely in hardware, which eliminates the need for host-side bonding.
+
+**Key Insight**: The recommended technique depends on VTEP location:
+- **Switch-centric (leaf is VTEP)** → EVPN-MH on switches, host bonding required
+- **DPU-centric (DPU is VTEP)** → L3 ECMP on DPU, no host bonding, simplified switch config
+
+See [context-evpn-mh-vs-ecmp.md](context-evpn-mh-vs-ecmp.md) for detailed comparison.
+
+*   **EVPN-MH (Ethernet VPN Multihoming)**: Tested and recommended baseline for switch-centric deployments. Standards-based solution using BGP control plane for state sync and loop avoidance. Requires EVPN-MH config on leaf switches and host-side bonding.
+*   **Hardware-Accelerated ECMP (Equal-Cost Multi-Path)**: Key benefit for DPU-centric clusters. When using **BlueField DPUs** in DPU Mode, the DPU acts as a Layer-3 router and EVPN VTEP, performing per-flow load balancing and failover entirely in hardware. Eliminates need for host-side bonding AND simplifies switch config (no EVPN-MH needed on leaves).
 *   **VF-LAG (Virtual Function Link Aggregation)**: A capability used to hardware-accelerate bonded network interfaces through the **OVS-DOCA (Open vSwitch Data Center Infrastructure-on-a-Chip Architecture)** virtual switch.
 *   **MC-LAG (Multi-Chassis Link Aggregation)**: A proprietary method used to make two physical switches appear as a single logical entity to a host; however, the sources generally **do not recommend** this due to its complexity and lower port efficiency compared to **EVPN-MH**.
 

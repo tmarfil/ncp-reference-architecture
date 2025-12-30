@@ -8,7 +8,7 @@
 | 2 | VLAN Tagging | [x] |
 | 3 | VXLAN (Virtual Extensible LAN) | [x] |
 | 4 | BGP EVPN (Control Plane for VXLAN) | [x] |
-| 5 | VRF (Virtual Routing and Forwarding) | [ ] |
+| 5 | VRF (Virtual Routing and Forwarding) | [x] |
 | 6 | Partition Keys (PKey) - InfiniBand Mapping | [ ] |
 | 7 | MC-LAG (Multi-Chassis Link Aggregation) | [ ] |
 | 8 | EVPN-MH (Ethernet VPN Multihoming) | [x] |
