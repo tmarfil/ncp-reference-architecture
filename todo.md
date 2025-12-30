@@ -7,7 +7,7 @@
 | 1 | Physical Isolation (OOB Management) | [x] |
 | 2 | VLAN Tagging | [x] |
 | 3 | VXLAN (Virtual Extensible LAN) | [x] |
-| 4 | BGP EVPN (Control Plane for VXLAN) | [ ] |
+| 4 | BGP EVPN (Control Plane for VXLAN) | [x] |
 | 5 | VRF (Virtual Routing and Forwarding) | [ ] |
 | 6 | Partition Keys (PKey) - InfiniBand Mapping | [ ] |
 | 7 | MC-LAG (Multi-Chassis Link Aggregation) | [ ] |
